@@ -223,8 +223,16 @@ static void dashboard(const Planner& p) {
     }
     quickSort(open, lessByDue);
     cout << "---- DASHBOARD: " << p.eventName() << " ----\n"
-         << "Total tasks: " << p.tasks().size() << "   Dependency links: " << p.graph().edgeCount() << "\n"
-         << "Not started: " << counts[0] << "   Ongoing: " << counts[1] << "   Done: " << counts[2] << "\n";
+     << "Total tasks: " << p.tasks().size() << "   Dependency links: " << p.graph().edgeCount() << "\n"
+     << "Not started: " << counts[0] << "   Ongoing: " << counts[1] << "   Done: " << counts[2] << "\n";
+     double completionRate = p.tasks().empty()
+    ? 0.0
+        : (static_cast<double>(counts[2]) / p.tasks().size()) * 100.0;
+
+    cout << fixed << setprecision(1);
+    cout << "Completion rate: " << completionRate << "%\n";
+    cout << defaultfloat;
+    
     cout << "Next deadlines (not done):\n";
     if (open.empty()) cout << "  none\n";
     for (size_t i = 0; i < open.size() && i < 3; ++i) printTaskLine(open[i]);
