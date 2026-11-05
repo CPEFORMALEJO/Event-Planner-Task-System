@@ -40,6 +40,44 @@ static string randomDate(mt19937& rng) {
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d", y, m, d);
     return buf;
 }
+static void showPerformanceRanking(
+    const vector<vector<double>>& results,
+    const int sizes[],
+    const char* opNames[]) {
+
+    cout << "\n============================================\n";
+    cout << "          PERFORMANCE RANKING\n";
+    cout << "============================================\n";
+
+    for (size_t i = 0; i < results.size(); ++i) {
+        int fastest = 0;
+        int slowest = 0;
+
+        for (int j = 1; j < 4; ++j) {
+            if (results[i][j] < results[i][fastest])
+                fastest = j;
+
+            if (results[i][j] > results[i][slowest])
+                slowest = j;
+        }
+
+        cout << "\nTasks: " << sizes[i] << "\n";
+
+        cout << "Fastest operation: "
+             << opNames[fastest] << "\n";
+
+        cout << "Time: "
+             << results[i][fastest] << " ms\n";
+
+        cout << "Slowest operation: "
+             << opNames[slowest] << "\n";
+
+        cout << "Time: "
+             << results[i][slowest] << " ms\n";
+    }
+
+    cout << "============================================\n";
+}
 
 int main() {
     const int sizes[] = {100, 1000, 10000, 100000};
@@ -122,6 +160,8 @@ int main() {
         printf("\n");
     }
 
+    showPerformanceRanking(results, sizes, opNames);
+    
     ofstream csv("benchmark_results.csv");
     csv << "n";
     for (const char* name : opNames) csv << ",\"" << name << " (ms)\"";
