@@ -57,7 +57,7 @@ class HashTable {
     std::size_t count_ = 0;
 
     static std::size_t hashString(const std::string& s) {
-        std::size_t h = 5381;                       // djb2 hash
+        std::size_t h = 5381;                        // djb2 hash
         for (unsigned char c : s) h = h * 33 + c;
         return h;
     }
@@ -196,7 +196,7 @@ public:
 // false and `stuck` holds the nodes that could not be scheduled.
 // ---------------------------------------------------------------------------
 inline bool topologicalOrder(const DiGraph& g, std::vector<int>& order,
-                             std::vector<int>* stuck = nullptr) {
+                           std::vector<int>* stuck = nullptr) {
     order.clear();
     const int cap = g.capacity();
     std::vector<int> indegree(static_cast<std::size_t>(cap), 0);
@@ -292,5 +292,66 @@ template <typename T, typename Less>
 void quickSort(std::vector<T>& a, Less less) {
     if (a.size() > 1) quickSort(a, 0, static_cast<long>(a.size()) - 1, less);
 }
+
+// ---------------------------------------------------------------------------
+// Min-Heap (Priority Queue): retrieves the most urgent tasks in O(log n) time.
+// ---------------------------------------------------------------------------
+template <typename T, typename Compare>
+class MinHeap {
+    std::vector<T> heap_;
+    Compare comp_;
+
+    void heapifyUp(std::size_t idx) {
+        while (idx > 0) {
+            std::size_t parent = (idx - 1) / 2;
+            if (comp_(heap_[idx], heap_[parent])) {
+                std::swap(heap_[idx], heap_[parent]);
+                idx = parent;
+            } else {
+                break;
+            }
+        }
+    }
+
+    void heapifyDown(std::size_t idx) {
+        std::size_t size = heap_.size();
+        while (true) {
+            std::size_t left = 2 * idx + 1;
+            std::size_t right = 2 * idx + 2;
+            std::size_t smallest = idx;
+
+            if (left < size && comp_(heap_[left], heap_[smallest])) smallest = left;
+            if (right < size && comp_(heap_[right], heap_[smallest])) smallest = right;
+
+            if (smallest != idx) {
+                std::swap(heap_[idx], heap_[smallest]);
+                idx = smallest;
+            } else {
+                break;
+            }
+        }
+    }
+
+public:
+    explicit MinHeap(Compare comp = Compare()) : comp_(comp) {}
+
+    void push(const T& value) {
+        heap_.push_back(value);
+        heapifyUp(heap_.size() - 1);
+    }
+
+    T pop() {
+        T topValue = heap_.front();
+        heap_[0] = heap_.back();
+        heap_.pop_back();
+        if (!heap_.empty()) heapifyDown(0);
+        return topValue;
+    }
+
+    const T& top() const { return heap_.front(); }
+    bool empty() const { return heap_.empty(); }
+    std::size_t size() const { return heap_.size(); }
+    void clear() { heap_.clear(); }
+};
 
 #endif  // STRUCTURES_H
