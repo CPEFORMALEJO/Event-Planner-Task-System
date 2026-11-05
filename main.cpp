@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32 // workaround for std which fixes text-rendering issue on Windows systems. 
+#include <windows.h>
+#endif
+
 #include "planner.h"
 
 using namespace std;
@@ -245,6 +249,11 @@ static string askFile(const string& prompt) {
 
 // ---------------------------------------------------------------------------
 int main() {
+    #ifdef _WIN32
+    SetConsoleCP(CP_UTF8);        // input
+    SetConsoleOutputCP(CP_UTF8);  // output
+    #endif
+
     Planner planner;
     cout << "\n========================================\n";
     cout << "   WELCOME TO EVENT PLANNER SYSTEM\n";
