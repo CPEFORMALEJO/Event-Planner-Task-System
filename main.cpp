@@ -1,5 +1,6 @@
-// main.cpp
-// Event Planner Task Dependency System: console menu.
+// Event Planner Task Dependency System
+// A console-based application for managing events and task dependencies.
+// Developed using C++.
 
 #include <cstdlib>
 #include <iomanip>
@@ -237,7 +238,10 @@ static string askFile(const string& prompt) {
 // ---------------------------------------------------------------------------
 int main() {
     Planner planner;
-    cout << "Welcome to the Event Planner Task Dependency System.\n";
+    cout << "\n========================================\n";
+    cout << "   WELCOME TO EVENT PLANNER SYSTEM\n";
+    cout << "========================================\n";
+    cout << "Organize your tasks and manage dependencies easily!\n\n";
 
     while (true) {
         showMenu(planner);
@@ -245,7 +249,10 @@ int main() {
         cout << "\n";
         switch (choice) {
             case 0:
-                cout << "Goodbye.\n";
+                cout << "\n========================================\n";
+                cout << "Thank you for using Event Planner!\n";
+                cout << "Have a productive day!\n";
+                cout << "========================================\n";
                 return 0;
             case 1: addTask(planner); break;
             case 2: editTask(planner); break;
