@@ -1,16 +1,9 @@
-<<<<<<< HEAD
-// Event Planner Task Dependency System
-// A console-based application for managing events and task dependencies.
-// Developed using C++.
-
-=======
->>>>>>> ce62d7b (added Dynamic array in place of vector.)
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <string>
 
-#ifdef _WIN32 // workaround for std which fixes text-rendering issue on Windows systems. 
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -219,24 +212,11 @@ static void dashboard(const Planner& p) {
     }
     quickSort(open, lessByDue);
     cout << "---- DASHBOARD: " << p.eventName() << " ----\n"
-<<<<<<< HEAD
-     << "Total tasks: " << p.tasks().size() << "   Dependency links: " << p.graph().edgeCount() << "\n"
-     << "Not started: " << counts[0] << "   Ongoing: " << counts[1] << "   Done: " << counts[2] << "\n";
-     double completionRate = p.tasks().empty()
-    ? 0.0
-        : (static_cast<double>(counts[2]) / p.tasks().size()) * 100.0;
-
-    cout << fixed << setprecision(1);
-    cout << "Completion rate: " << completionRate << "%\n";
-    cout << defaultfloat;
-    
-=======
          << "Total tasks: " << p.tasks().size() << "   Dependency links: " << p.graph().edgeCount() << "\n"
          << "Not started: " << counts[0] << "   Ongoing: " << counts[1] << "   Done: " << counts[2] << "\n";
     const std::size_t total = p.tasks().size();
     const int tenths = total ? static_cast<int>((counts[2] * 1000 + total / 2) / total) : 0;
     cout << "Completion rate: " << tenths / 10 << "." << tenths % 10 << "%\n";
->>>>>>> ce62d7b (added Dynamic array in place of vector.)
     cout << "Next deadlines (not done):\n";
     if (open.empty()) cout << "  none\n";
     for (size_t i = 0; i < open.size() && i < 3; ++i) printTaskLine(open[i]);
@@ -248,16 +228,12 @@ static string askFile(const string& prompt) {
 }
 
 int main() {
-    #ifdef _WIN32
-    SetConsoleCP(CP_UTF8);        // input
-    SetConsoleOutputCP(CP_UTF8);  // output
-    #endif
-
+#ifdef _WIN32
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     Planner planner;
-    cout << "\n========================================\n";
-    cout << "   WELCOME TO EVENT PLANNER SYSTEM\n";
-    cout << "========================================\n";
-    cout << "Organize your tasks and manage dependencies easily!\n\n";
+    cout << "Welcome to the Event Planner Task Dependency System.\n";
 
     while (true) {
         showMenu(planner);
@@ -265,10 +241,7 @@ int main() {
         cout << "\n";
         switch (choice) {
             case 0:
-                cout << "\n========================================\n";
-                cout << "Thank you for using Event Planner!\n";
-                cout << "Have a productive day!\n";
-                cout << "========================================\n";
+                cout << "Goodbye.\n";
                 return 0;
             case 1: addTask(planner); break;
             case 2: editTask(planner); break;
