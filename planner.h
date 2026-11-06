@@ -78,7 +78,7 @@ public:
 
 private:
     struct State {
-        DynamicArray tasks;
+        DynamicArray<Task> tasks;
         DiGraph graph;
         int nextId;
         std::string eventName;
