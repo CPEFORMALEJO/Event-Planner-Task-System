@@ -1,12 +1,3 @@
-// benchmark.cpp
-// Timing code for Section 5.2 (Experimental Analysis).
-// Measures four operations at n = 100, 1,000, 10,000 and 100,000.
-// Each measurement is repeated 5 times and the average is reported.
-// Only the operation itself is timed (data generation is outside the timer).
-//
-// Build: g++ -std=c++17 -O2 benchmark.cpp -o benchmark
-// Output: a table on screen and benchmark_results.csv (for the line graph).
-
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -21,8 +12,8 @@ using namespace std;
 using Clock = chrono::steady_clock;
 
 static const int REPS = 5;
-static const int LOOKUPS = 1000;          // number of searches per measurement
-static volatile long long g_sink = 0;     // stops the compiler from removing the work
+static const int LOOKUPS = 1000;
+static volatile long long g_sink = 0;
 
 template <typename F>
 static double timeMs(F&& work) {
@@ -40,55 +31,17 @@ static string randomDate(mt19937& rng) {
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d", y, m, d);
     return buf;
 }
-static void showPerformanceRanking(
-    const vector<vector<double>>& results,
-    const int sizes[],
-    const char* opNames[]) {
-
-    cout << "\n============================================\n";
-    cout << "          PERFORMANCE RANKING\n";
-    cout << "============================================\n";
-
-    for (size_t i = 0; i < results.size(); ++i) {
-        int fastest = 0;
-        int slowest = 0;
-
-        for (int j = 1; j < 4; ++j) {
-            if (results[i][j] < results[i][fastest])
-                fastest = j;
-
-            if (results[i][j] > results[i][slowest])
-                slowest = j;
-        }
-
-        cout << "\nTasks: " << sizes[i] << "\n";
-
-        cout << "Fastest operation: "
-             << opNames[fastest] << "\n";
-
-        cout << "Time: "
-             << results[i][fastest] << " ms\n";
-
-        cout << "Slowest operation: "
-             << opNames[slowest] << "\n";
-
-        cout << "Time: "
-             << results[i][slowest] << " ms\n";
-    }
-
-    cout << "============================================\n";
-}
 
 int main() {
     const int sizes[] = {100, 1000, 10000, 100000};
     const char* opNames[] = {"Quick sort by due date", "Hash search (1000 lookups)",
                              "Linear search (1000 lookups)", "Topological sort (Kahn)"};
-    vector<vector<double>> results;   // results[size index][operation]
+    vector<vector<double>> results;
 
     for (int n : sizes) {
-        mt19937 rng(12345);           // same seed: same data on every run
-        vector<Task> tasks(static_cast<size_t>(n));
-        vector<string> names(static_cast<size_t>(n));
+        mt19937 rng(12345);
+        DynamicArray<Task> tasks(static_cast<size_t>(n));
+        DynamicArray<string> names(static_cast<size_t>(n));
         HashTable table;
         for (int i = 0; i < n; ++i) {
             Task& t = tasks[static_cast<size_t>(i)];
@@ -101,10 +54,9 @@ int main() {
             table.put(t.name, i);
         }
 
-        vector<string> queries(LOOKUPS);
-        for (auto& q : queries) q = names[rng() % static_cast<unsigned>(n)];
+        DynamicArray<string> queries(LOOKUPS);
+        for (string& q : queries) q = names[rng() % static_cast<unsigned>(n)];
 
-        // Random DAG: n nodes, 2n edges, always from a lower to a higher id.
         DiGraph graph;
         for (int i = 0; i < n; ++i) graph.addNode(i);
         for (int e = 0; e < 2 * n; ++e) {
@@ -116,13 +68,11 @@ int main() {
 
         double total[4] = {0, 0, 0, 0};
         for (int r = 0; r < REPS; ++r) {
-            // 1. Quick sort (fresh unsorted copy each run, copy not timed)
-            vector<Task> copy = tasks;
+            DynamicArray<Task> copy = tasks;
             total[0] += timeMs([&] { quickSort(copy, lessByDue); });
             for (size_t i = 1; i < copy.size(); ++i)
                 if (lessByDue(copy[i], copy[i - 1])) { cerr << "SORT ERROR\n"; return 1; }
 
-            // 2. Hash table search
             total[1] += timeMs([&] {
                 long long acc = 0;
                 int pos;
@@ -130,7 +80,6 @@ int main() {
                 g_sink = acc;
             });
 
-            // 3. Linear search over the same names
             total[2] += timeMs([&] {
                 long long acc = 0;
                 for (const string& q : queries)
@@ -139,8 +88,7 @@ int main() {
                 g_sink = acc;
             });
 
-            // 4. Kahn's topological sort
-            vector<int> order;
+            DynamicArray<int> order;
             total[3] += timeMs([&] { topologicalOrder(graph, order); });
             if (order.size() != static_cast<size_t>(n)) { cerr << "TOPO ERROR\n"; return 1; }
         }
@@ -160,8 +108,6 @@ int main() {
         printf("\n");
     }
 
-    showPerformanceRanking(results, sizes, opNames);
-    
     ofstream csv("benchmark_results.csv");
     csv << "n";
     for (const char* name : opNames) csv << ",\"" << name << " (ms)\"";
