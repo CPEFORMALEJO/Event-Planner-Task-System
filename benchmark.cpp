@@ -8,8 +8,7 @@
 
 #include "planner.h"
 
-using namespace std;
-using Clock = chrono::steady_clock;
+using Clock = std::chrono::steady_clock;
 
 static const int REPS = 5;
 static const int LOOKUPS = 1000;
@@ -20,10 +19,10 @@ static double timeMs(F&& work) {
     auto start = Clock::now();
     work();
     auto stop = Clock::now();
-    return chrono::duration<double, milli>(stop - start).count();
+    return std::chrono::duration<double, std::milli>(stop - start).count();
 }
 
-static string randomDate(mt19937& rng) {
+static std::string randomDate(std::mt19937& rng) {
     int y = 2026 + static_cast<int>(rng() % 3);
     int m = 1 + static_cast<int>(rng() % 12);
     int d = 1 + static_cast<int>(rng() % 28);
@@ -36,17 +35,17 @@ int main() {
     const int sizes[] = {100, 1000, 10000, 100000};
     const char* opNames[] = {"Quick sort by due date", "Hash search (1000 lookups)",
                              "Linear search (1000 lookups)", "Topological sort (Kahn)"};
-    vector<vector<double>> results;
+    std::vector<std::vector<double>> results;
 
     for (int n : sizes) {
-        mt19937 rng(12345);
+        std::mt19937 rng(12345);
         DynamicArray<Task> tasks(static_cast<size_t>(n));
-        DynamicArray<string> names(static_cast<size_t>(n));
+        DynamicArray<std::string> names(static_cast<size_t>(n));
         HashTable table;
         for (int i = 0; i < n; ++i) {
             Task& t = tasks[static_cast<size_t>(i)];
             t.id = i + 1;
-            t.name = "task_" + to_string(i);
+            t.name = "task_" + std::to_string(i);
             t.assignee = "person";
             t.due = randomDate(rng);
             t.status = static_cast<int>(rng() % 3);
@@ -54,8 +53,8 @@ int main() {
             table.put(t.name, i);
         }
 
-        DynamicArray<string> queries(LOOKUPS);
-        for (string& q : queries) q = names[rng() % static_cast<unsigned>(n)];
+        DynamicArray<std::string> queries(LOOKUPS);
+        for (std::string& q : queries) q = names[rng() % static_cast<unsigned>(n)];
 
         DiGraph graph;
         for (int i = 0; i < n; ++i) graph.addNode(i);
@@ -63,7 +62,7 @@ int main() {
             int u = static_cast<int>(rng() % static_cast<unsigned>(n));
             int v = static_cast<int>(rng() % static_cast<unsigned>(n));
             if (u == v) continue;
-            graph.addEdge(min(u, v), max(u, v));
+            graph.addEdge(std::min(u, v), std::max(u, v));
         }
 
         double total[4] = {0, 0, 0, 0};
@@ -71,18 +70,18 @@ int main() {
             DynamicArray<Task> copy = tasks;
             total[0] += timeMs([&] { quickSort(copy, lessByDue); });
             for (size_t i = 1; i < copy.size(); ++i)
-                if (lessByDue(copy[i], copy[i - 1])) { cerr << "SORT ERROR\n"; return 1; }
+                if (lessByDue(copy[i], copy[i - 1])) { std::cerr << "SORT ERROR\n"; return 1; }
 
             total[1] += timeMs([&] {
                 long long acc = 0;
                 int pos;
-                for (const string& q : queries) if (table.get(q, pos)) acc += pos;
+                for (const std::string& q : queries) if (table.get(q, pos)) acc += pos;
                 g_sink = acc;
             });
 
             total[2] += timeMs([&] {
                 long long acc = 0;
-                for (const string& q : queries)
+                for (const std::string& q : queries)
                     for (size_t i = 0; i < names.size(); ++i)
                         if (names[i] == q) { acc += static_cast<long long>(i); break; }
                 g_sink = acc;
@@ -90,10 +89,10 @@ int main() {
 
             DynamicArray<int> order;
             total[3] += timeMs([&] { topologicalOrder(graph, order); });
-            if (order.size() != static_cast<size_t>(n)) { cerr << "TOPO ERROR\n"; return 1; }
+            if (order.size() != static_cast<size_t>(n)) { std::cerr << "TOPO ERROR\n"; return 1; }
         }
 
-        vector<double> avg;
+        std::vector<double> avg;
         for (double t : total) avg.push_back(t / REPS);
         results.push_back(avg);
     }
@@ -108,7 +107,7 @@ int main() {
         printf("\n");
     }
 
-    ofstream csv("benchmark_results.csv");
+    std::ofstream csv("benchmark_results.csv");
     csv << "n";
     for (const char* name : opNames) csv << ",\"" << name << " (ms)\"";
     csv << "\n";

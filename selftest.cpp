@@ -7,8 +7,6 @@
 
 #include "planner.h"
 
-using namespace std;
-
 static int passed = 0, failed = 0;
 
 #define CHECK(cond)                                                          \
@@ -21,30 +19,30 @@ static int passed = 0, failed = 0;
     } while (0)
 
 static void testDynamicArray() {
-    mt19937 rng(7);
+    std::mt19937 rng(7);
     DynamicArray<int> a;
-    vector<int> ref;
+    std::vector<int> ref;
     for (int step = 0; step < 20000; ++step) {
         int op = static_cast<int>(rng() % 7);
         int v = static_cast<int>(rng() % 50);
         if (op <= 2) { a.push_back(v); ref.push_back(v); }
         else if (op == 3 && !ref.empty()) { a.pop_back(); ref.pop_back(); }
         else if (op == 4 && !ref.empty()) {
-            size_t i = rng() % ref.size();
+            std::size_t i = rng() % ref.size();
             a.erase(i);
             ref.erase(ref.begin() + static_cast<long>(i));
         } else if (op == 5) {
-            size_t i = rng() % (ref.size() + 1);
+            std::size_t i = rng() % (ref.size() + 1);
             a.insert(i, v);
             ref.insert(ref.begin() + static_cast<long>(i), v);
         } else if (op == 6 && step % 50 == 0) {
             a.removeAll(v);
-            ref.erase(remove(ref.begin(), ref.end(), v), ref.end());
+            ref.erase(std::remove(ref.begin(), ref.end(), v), ref.end());
         }
         if (a.size() != ref.size()) { CHECK(false); return; }
     }
     bool same = true;
-    for (size_t i = 0; i < ref.size(); ++i) same = same && a[i] == ref[i];
+    for (std::size_t i = 0; i < ref.size(); ++i) same = same && a[i] == ref[i];
     CHECK(same);
 
     DynamicArray<int> b = a;
@@ -54,13 +52,13 @@ static void testDynamicArray() {
     CHECK(b.size() + 1 == a.size());
     CHECK(c.size() == b.size());
     bool deep = true;
-    for (size_t i = 0; i < b.size(); ++i) deep = deep && b[i] == c[i];
+    for (std::size_t i = 0; i < b.size(); ++i) deep = deep && b[i] == c[i];
     CHECK(deep);
 
     DynamicArray<int> moved = std::move(c);
     CHECK(c.size() == 0 && moved.size() == b.size());
 
-    DynamicArray<string> s;
+    DynamicArray<std::string> s;
     s.push_back("alpha");
     for (int i = 0; i < 100; ++i) s.push_back(s[0]);
     CHECK(s.size() == 101 && s[100] == "alpha");
@@ -94,11 +92,11 @@ static void testStackQueue() {
 }
 
 static void testHashTable() {
-    mt19937 rng(11);
+    std::mt19937 rng(11);
     HashTable h;
-    map<string, int> ref;
+    std::map<std::string, int> ref;
     for (int step = 0; step < 30000; ++step) {
-        string key = "k" + to_string(rng() % 3000);
+        std::string key = "k" + std::to_string(rng() % 3000);
         int op = static_cast<int>(rng() % 4);
         if (op <= 1) { int v = static_cast<int>(rng() % 1000); h.put(key, v); ref[key] = v; }
         else if (op == 2) { CHECK(h.erase(key) == (ref.erase(key) == 1)); }
@@ -116,25 +114,25 @@ static void testHashTable() {
 }
 
 static void testGraph() {
-    mt19937 rng(5);
+    std::mt19937 rng(5);
     for (int trial = 0; trial < 50; ++trial) {
         int n = 2 + static_cast<int>(rng() % 60);
         DiGraph g;
         for (int i = 1; i <= n; ++i) g.addNode(i);
-        vector<pair<int, int>> edges;
+        std::vector<std::pair<int, int>> edges;
         for (int e = 0; e < 3 * n; ++e) {
             int u = 1 + static_cast<int>(rng() % static_cast<unsigned>(n));
             int v = 1 + static_cast<int>(rng() % static_cast<unsigned>(n));
-            if (u == v || g.hasEdge(min(u, v), max(u, v))) continue;
-            g.addEdge(min(u, v), max(u, v));
-            edges.push_back({min(u, v), max(u, v)});
+            if (u == v || g.hasEdge(std::min(u, v), std::max(u, v))) continue;
+            g.addEdge(std::min(u, v), std::max(u, v));
+            edges.push_back({std::min(u, v), std::max(u, v)});
         }
         DynamicArray<int> order;
         CHECK(topologicalOrder(g, order));
-        vector<int> pos(static_cast<size_t>(n) + 1, -1);
-        for (size_t i = 0; i < order.size(); ++i) pos[static_cast<size_t>(order[i])] = static_cast<int>(i);
-        bool valid = order.size() == static_cast<size_t>(n);
-        for (auto& e : edges) valid = valid && pos[static_cast<size_t>(e.first)] < pos[static_cast<size_t>(e.second)];
+        std::vector<int> pos(static_cast<std::size_t>(n) + 1, -1);
+        for (std::size_t i = 0; i < order.size(); ++i) pos[static_cast<std::size_t>(order[i])] = static_cast<int>(i);
+        bool valid = order.size() == static_cast<std::size_t>(n);
+        for (auto& e : edges) valid = valid && pos[static_cast<std::size_t>(e.first)] < pos[static_cast<std::size_t>(e.second)];
         CHECK(valid);
     }
     DiGraph g;
@@ -144,7 +142,7 @@ static void testGraph() {
     CHECK(!topologicalOrder(g, order, &stuck));
     DynamicArray<int> cycle = extractCycle(g, stuck);
     bool real = cycle.size() >= 2;
-    for (size_t i = 0; i < cycle.size(); ++i)
+    for (std::size_t i = 0; i < cycle.size(); ++i)
         real = real && g.hasEdge(cycle[i], cycle[(i + 1) % cycle.size()]);
     CHECK(real);
     CHECK(g.hasPath(1, 5) && !g.hasPath(5, 1) && !g.hasPath(1, 99));
@@ -153,13 +151,13 @@ static void testGraph() {
 }
 
 static void testQuickSort() {
-    mt19937 rng(3);
+    std::mt19937 rng(3);
     for (int trial = 0; trial < 200; ++trial) {
-        size_t n = rng() % 300;
+        std::size_t n = rng() % 300;
         int mode = trial % 4;
         DynamicArray<Task> a;
-        vector<Task> ref;
-        for (size_t i = 0; i < n; ++i) {
+        std::vector<Task> ref;
+        for (std::size_t i = 0; i < n; ++i) {
             Task t;
             t.id = static_cast<int>(i) + 1;
             int day = mode == 0 ? static_cast<int>(rng() % 28) + 1 : mode == 1 ? static_cast<int>(i % 28) + 1
@@ -171,9 +169,9 @@ static void testQuickSort() {
             ref.push_back(t);
         }
         quickSort(a, lessByDue);
-        sort(ref.begin(), ref.end(), lessByDue);
+        std::sort(ref.begin(), ref.end(), lessByDue);
         bool same = true;
-        for (size_t i = 0; i < n; ++i) same = same && a[i].id == ref[i].id;
+        for (std::size_t i = 0; i < n; ++i) same = same && a[i].id == ref[i].id;
         CHECK(same);
     }
     DynamicArray<Task> big;
