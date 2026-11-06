@@ -84,18 +84,18 @@ public:
     };
 
 private:
-    struct State {                    // one undo / redo snapshot
+    struct State {                   
         std::vector<Task> tasks;
         DiGraph graph;
         int nextId;
     };
 
-    std::vector<Task> tasks_;         // dynamic array of task records
-    DiGraph graph_;                   // dependency graph (adjacency list)
+    std::vector<Task> tasks_;         
+    DiGraph graph_;                   
     int nextId_ = 1;
     std::string eventName_ = "Untitled Event";
-    HashTable idIndex_;               // "id"        -> position in tasks_
-    HashTable nameIndex_;             // lower(name) -> position in tasks_
+    HashTable idIndex_;               
+    HashTable nameIndex_;             
     Stack<State> undo_, redo_;
 
     State capture() const { return State{tasks_, graph_, nextId_}; }
