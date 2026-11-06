@@ -55,14 +55,16 @@ static int askStatus(bool allowBlank) {
 
 static void report(const Planner::Result& r) { cout << (r.ok ? "[OK] " : "[Error] ") << r.message << "\n"; }
 
-static string idList(const DynamicArray<int>& ids) {
+template <typename Array>
+static string idList(const Array& ids) {
     if (ids.empty()) return "-";
     string out;
     for (size_t i = 0; i < ids.size(); ++i) out += (i ? "," : "") + to_string(ids[i]);
     return out;
 }
 
-static void printTasks(const Planner& p, const DynamicArray<Task>& list) {
+template <typename Array>
+static void printTasks(const Planner& p, const Array& list) {
     cout << "Event: " << p.eventName() << "\n";
     if (list.empty()) {
         cout << "No tasks to show.\n";
@@ -169,7 +171,8 @@ static void generateOrder(const Planner& p) {
         cout << "No tasks to order.\n";
         return;
     }
-    DynamicArray<int> order, cycle;
+    vector<int> order;
+    vector<int> cycle;
     if (p.taskOrder(order, cycle)) {
         cout << "Valid task order (every task comes after its prerequisites):\n";
         for (size_t i = 0; i < order.size(); ++i) {
@@ -205,7 +208,8 @@ static void showImpact(const Planner& p) {
 
 static void dashboard(const Planner& p) {
     int counts[3] = {0, 0, 0};
-    DynamicArray<Task> open;
+    auto open = p.tasks();
+    open.clear();
     for (const Task& t : p.tasks()) {
         ++counts[t.status];
         if (t.status != 2) open.push_back(t);
