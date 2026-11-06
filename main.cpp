@@ -1,12 +1,14 @@
+<<<<<<< HEAD
 // Event Planner Task Dependency System
 // A console-based application for managing events and task dependencies.
 // Developed using C++.
 
+=======
+>>>>>>> ce62d7b (added Dynamic array in place of vector.)
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #ifdef _WIN32 // workaround for std which fixes text-rendering issue on Windows systems. 
 #include <windows.h>
@@ -16,9 +18,6 @@
 
 using namespace std;
 
-// ---------------------------------------------------------------------------
-// Input helpers (every prompt validates its input and asks again)
-// ---------------------------------------------------------------------------
 static string ask(const string& prompt) {
     cout << prompt;
     string s;
@@ -51,7 +50,6 @@ static string askDate(const string& prompt, bool allowBlank) {
     }
 }
 
-// Returns 0..2, or -1 when blank is allowed and the user pressed Enter.
 static int askStatus(bool allowBlank) {
     while (true) {
         string s = ask("Status (1 = Not started, 2 = Ongoing, 3 = Done)" +
@@ -64,17 +62,14 @@ static int askStatus(bool allowBlank) {
 
 static void report(const Planner::Result& r) { cout << (r.ok ? "[OK] " : "[Error] ") << r.message << "\n"; }
 
-// ---------------------------------------------------------------------------
-// Output helpers
-// ---------------------------------------------------------------------------
-static string idList(const vector<int>& ids) {
+static string idList(const DynamicArray<int>& ids) {
     if (ids.empty()) return "-";
     string out;
     for (size_t i = 0; i < ids.size(); ++i) out += (i ? "," : "") + to_string(ids[i]);
     return out;
 }
 
-static void printTasks(const Planner& p, const vector<Task>& list) {
+static void printTasks(const Planner& p, const DynamicArray<Task>& list) {
     cout << "Event: " << p.eventName() << "\n";
     if (list.empty()) {
         cout << "No tasks to show.\n";
@@ -108,9 +103,6 @@ static void showMenu(const Planner& p) {
          << " 0  Exit\n";
 }
 
-// ---------------------------------------------------------------------------
-// Menu actions
-// ---------------------------------------------------------------------------
 static void addTask(Planner& p) {
     string name = ask("Task name: ");
     string who = ask("Assigned person: ");
@@ -184,7 +176,7 @@ static void generateOrder(const Planner& p) {
         cout << "No tasks to order.\n";
         return;
     }
-    vector<int> order, cycle;
+    DynamicArray<int> order, cycle;
     if (p.taskOrder(order, cycle)) {
         cout << "Valid task order (every task comes after its prerequisites):\n";
         for (size_t i = 0; i < order.size(); ++i) {
@@ -220,13 +212,14 @@ static void showImpact(const Planner& p) {
 
 static void dashboard(const Planner& p) {
     int counts[3] = {0, 0, 0};
-    vector<Task> open;
+    DynamicArray<Task> open;
     for (const Task& t : p.tasks()) {
         ++counts[t.status];
         if (t.status != 2) open.push_back(t);
     }
     quickSort(open, lessByDue);
     cout << "---- DASHBOARD: " << p.eventName() << " ----\n"
+<<<<<<< HEAD
      << "Total tasks: " << p.tasks().size() << "   Dependency links: " << p.graph().edgeCount() << "\n"
      << "Not started: " << counts[0] << "   Ongoing: " << counts[1] << "   Done: " << counts[2] << "\n";
      double completionRate = p.tasks().empty()
@@ -237,6 +230,13 @@ static void dashboard(const Planner& p) {
     cout << "Completion rate: " << completionRate << "%\n";
     cout << defaultfloat;
     
+=======
+         << "Total tasks: " << p.tasks().size() << "   Dependency links: " << p.graph().edgeCount() << "\n"
+         << "Not started: " << counts[0] << "   Ongoing: " << counts[1] << "   Done: " << counts[2] << "\n";
+    const std::size_t total = p.tasks().size();
+    const int tenths = total ? static_cast<int>((counts[2] * 1000 + total / 2) / total) : 0;
+    cout << "Completion rate: " << tenths / 10 << "." << tenths % 10 << "%\n";
+>>>>>>> ce62d7b (added Dynamic array in place of vector.)
     cout << "Next deadlines (not done):\n";
     if (open.empty()) cout << "  none\n";
     for (size_t i = 0; i < open.size() && i < 3; ++i) printTaskLine(open[i]);
@@ -247,7 +247,6 @@ static string askFile(const string& prompt) {
     return s.empty() ? "event_tasks.txt" : s;
 }
 
-// ---------------------------------------------------------------------------
 int main() {
     #ifdef _WIN32
     SetConsoleCP(CP_UTF8);        // input
