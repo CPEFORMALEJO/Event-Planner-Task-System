@@ -1,28 +1,23 @@
-// planner.h
-// Task record, validation helpers, and the Planner class that ties the data
-// structures together.  The Planner does no console I/O; main.cpp handles that.
-
 #ifndef PLANNER_H
 #define PLANNER_H
 
+#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "structures.h"
 
-// ---------------------------------------------------------------------------
-// Task record and helpers
-// ---------------------------------------------------------------------------
+const int MAX_TASK_ID = 999999;
+
 struct Task {
     int id = 0;
     std::string name;
     std::string assignee;
-    std::string due;     // YYYY-MM-DD, so plain string comparison orders dates correctly
-    int status = 0;      // 0 = Not started, 1 = Ongoing, 2 = Done
+    std::string due;
+    int status = 0;
 };
 
 inline std::string toLower(std::string s) {
@@ -57,25 +52,23 @@ inline bool isValidDate(const std::string& d) {
     return day <= maxDay;
 }
 
-// Strict orderings (ties broken by id) for the sorted reports.
 inline bool lessByName(const Task& a, const Task& b) {
     const std::string x = toLower(a.name), y = toLower(b.name);
     if (x != y) return x < y;
     return a.id < b.id;
 }
+
 inline bool lessByDue(const Task& a, const Task& b) {
     if (a.due != b.due) return a.due < b.due;
     return a.id < b.id;
 }
+
 inline bool lessByStatus(const Task& a, const Task& b) {
     if (a.status != b.status) return a.status < b.status;
     if (a.due != b.due) return a.due < b.due;
     return a.id < b.id;
 }
 
-// ---------------------------------------------------------------------------
-// Planner
-// ---------------------------------------------------------------------------
 class Planner {
 public:
     struct Result {
@@ -84,26 +77,28 @@ public:
     };
 
 private:
-    struct State {                   
-        std::vector<Task> tasks;
+    struct State {
+        DynamicArray<Task> tasks;
         DiGraph graph;
         int nextId;
+        std::string eventName;
     };
 
-    std::vector<Task> tasks_;         
-    DiGraph graph_;                   
+    DynamicArray<Task> tasks_;
+    DiGraph graph_;
     int nextId_ = 1;
     std::string eventName_ = "Untitled Event";
-    HashTable idIndex_;               
-    HashTable nameIndex_;             
+    HashTable idIndex_;
+    HashTable nameIndex_;
     Stack<State> undo_, redo_;
 
-    State capture() const { return State{tasks_, graph_, nextId_}; }
+    State capture() const { return State{tasks_, graph_, nextId_, eventName_}; }
 
     void restore(const State& s) {
         tasks_ = s.tasks;
         graph_ = s.graph;
         nextId_ = s.nextId;
+        eventName_ = s.eventName;
         rebuildIndexes();
     }
 
@@ -153,7 +148,7 @@ private:
     }
 
 public:
-    const std::vector<Task>& tasks() const { return tasks_; }
+    const DynamicArray<Task>& tasks() const { return tasks_; }
     const DiGraph& graph() const { return graph_; }
     const std::string& eventName() const { return eventName_; }
 
@@ -161,11 +156,11 @@ public:
         if (name.empty()) return {false, "Event name cannot be empty."};
         if (name.size() > 50) return {false, "Event name is too long (maximum 50 characters)."};
         if (name.find('|') != std::string::npos) return {false, "The '|' character is not allowed."};
+        if (name != eventName_) snapshot();
         eventName_ = name;
         return {true, "Event name set to \"" + name + "\"."};
     }
 
-    // ---- lookup (hash table) -------------------------------------------
     const Task* findById(int id) const {
         int pos;
         if (!idIndex_.get(std::to_string(id), pos)) return nullptr;
@@ -178,7 +173,6 @@ public:
         return &tasks_[static_cast<std::size_t>(pos)];
     }
 
-    // ---- task records ----------------------------------------------------
     Result addTask(const std::string& name, const std::string& assignee, const std::string& due,
                    int status) {
         Result v = validate(name, assignee, due, status, -1);
@@ -188,7 +182,6 @@ public:
         return {true, "Task added with ID " + std::to_string(id) + "."};
     }
 
-    // Empty strings (and status -1) mean "keep the current value".
     Result editTask(int id, const std::string& name, const std::string& assignee,
                     const std::string& due, int status) {
         const Task* old = findById(id);
@@ -216,14 +209,12 @@ public:
         if (!idIndex_.get(std::to_string(id), pos))
             return {false, "No task with ID " + std::to_string(id) + "."};
         snapshot();
-        tasks_.erase(tasks_.begin() + pos);
+        tasks_.erase(static_cast<std::size_t>(pos));
         graph_.removeNode(id);
         rebuildIndexes();
         return {true, "Task " + std::to_string(id) + " and its dependency links were removed."};
     }
 
-    // ---- dependencies (directed graph) ----------------------------------
-    // prerequisite -> dependent : the prerequisite must be finished first.
     Result addDependency(int prerequisite, int dependent) {
         if (!findById(prerequisite) || !findById(dependent))
             return {false, "Both task IDs must exist."};
@@ -250,29 +241,26 @@ public:
         return {true, "Dependency removed."};
     }
 
-    std::vector<int> prerequisitesOf(int id) const {
-        std::vector<int> result;
+    DynamicArray<int> prerequisitesOf(int id) const {
+        DynamicArray<int> result;
         for (const Task& t : tasks_)
             if (graph_.hasEdge(t.id, id)) result.push_back(t.id);
         return result;
     }
 
-    // Kahn's algorithm.  Returns true with `order` filled, or false with one
-    // cycle (by task id) in `cycle`.
-    bool taskOrder(std::vector<int>& order, std::vector<int>& cycle) const {
-        std::vector<int> stuck;
+    bool taskOrder(DynamicArray<int>& order, DynamicArray<int>& cycle) const {
+        DynamicArray<int> stuck;
         if (topologicalOrder(graph_, order, &stuck)) return true;
         cycle = extractCycle(graph_, stuck);
         return false;
     }
 
-    // Breadth-first search from a delayed task: every task that directly or
-    // indirectly depends on it, paired with its distance (1 = direct).
-    std::vector<std::pair<int, int>> downstream(int id) const {
-        std::vector<std::pair<int, int>> affected;
+    DynamicArray<std::pair<int, int>> downstream(int id) const {
+        DynamicArray<std::pair<int, int>> affected;
         if (!graph_.hasNode(id)) return affected;
-        std::vector<int> dist(static_cast<std::size_t>(graph_.capacity()), 0);
-        std::vector<char> seen(static_cast<std::size_t>(graph_.capacity()), 0);
+        const std::size_t cap = static_cast<std::size_t>(graph_.capacity());
+        DynamicArray<int> dist(cap, 0);
+        DynamicArray<char> seen(cap, 0);
         Queue<int> q;
         q.enqueue(id);
         seen[static_cast<std::size_t>(id)] = 1;
@@ -289,17 +277,14 @@ public:
         return affected;
     }
 
-    // ---- sorted reports (quick sort) -------------------------------------
-    // key: 1 = name, 2 = due date, 3 = status
-    std::vector<Task> sortedBy(int key) const {
-        std::vector<Task> copy = tasks_;
+    DynamicArray<Task> sortedBy(int key) const {
+        DynamicArray<Task> copy = tasks_;
         if (key == 1) quickSort(copy, lessByName);
         else if (key == 2) quickSort(copy, lessByDue);
         else quickSort(copy, lessByStatus);
         return copy;
     }
 
-    // ---- undo / redo (stacks) ---------------------------------------------
     Result undo() {
         if (undo_.empty()) return {false, "Nothing to undo."};
         redo_.push(capture());
@@ -316,7 +301,6 @@ public:
         return {true, "Action redone."};
     }
 
-    // ---- save / load -------------------------------------------------------
     Result save(const std::string& path) const {
         std::ofstream out(path);
         if (!out) return {false, "Cannot write to '" + path + "'."};
@@ -333,15 +317,15 @@ public:
         std::ifstream in(path);
         if (!in) return {false, "Cannot open '" + path + "'."};
 
-        std::vector<Task> loaded;
-        std::vector<std::pair<int, int>> edges;
+        DynamicArray<Task> loaded;
+        DynamicArray<std::pair<int, int>> edges;
         std::string loadedName = "Untitled Event";
         std::string line;
         int lineNo = 0;
         while (std::getline(in, line)) {
             ++lineNo;
             if (trim(line).empty()) continue;
-            std::vector<std::string> p;
+            DynamicArray<std::string> p;
             std::stringstream ss(line);
             std::string part;
             while (std::getline(ss, part, '|')) p.push_back(part);
@@ -354,8 +338,8 @@ public:
                     t.assignee = p[3];
                     t.due = p[4];
                     t.status = std::stoi(p[5]);
-                    if (t.id < 1 || t.name.empty() || t.assignee.empty() || !isValidDate(t.due) ||
-                        t.status < 0 || t.status > 2)
+                    if (t.id < 1 || t.id > MAX_TASK_ID || t.name.empty() || t.assignee.empty() ||
+                        !isValidDate(t.due) || t.status < 0 || t.status > 2)
                         return {false, "Invalid task record" + where + ". Nothing was loaded."};
                     loaded.push_back(t);
                 } else if (p[0] == "N" && p.size() == 2 && !trim(p[1]).empty()) {
@@ -379,10 +363,19 @@ public:
             seenNames.put(toLower(t.name), 1);
             maxId = std::max(maxId, t.id);
         }
-        for (const auto& e : edges)
+
+        HashTable seenEdges;
+        for (const auto& e : edges) {
             if (!seenIds.get(std::to_string(e.first), dummy) ||
                 !seenIds.get(std::to_string(e.second), dummy))
                 return {false, "A dependency refers to a missing task. Nothing was loaded."};
+            if (e.first == e.second)
+                return {false, "A task cannot depend on itself. Nothing was loaded."};
+            const std::string key = std::to_string(e.first) + ">" + std::to_string(e.second);
+            if (seenEdges.get(key, dummy))
+                return {false, "Duplicate dependency in file. Nothing was loaded."};
+            seenEdges.put(key, 1);
+        }
 
         snapshot();
         tasks_ = loaded;
@@ -396,12 +389,12 @@ public:
                           std::to_string(edges.size()) + " dependencies from '" + path + "'."};
     }
 
-    // Replaces the current data with a small sample event (for demos and screenshots).
     Result loadSample() {
         snapshot();
         tasks_.clear();
         graph_.clear();
         nextId_ = 1;
+        rebuildIndexes();
         eventName_ = "Sample Wedding Reception";
         insertTask("Finalize guest list", "Maria", "2026-11-10", 2);
         insertTask("Book venue hall", "Jose", "2026-11-12", 1);
@@ -418,4 +411,4 @@ public:
     }
 };
 
-#endif  // PLANNER_H
+#endif
